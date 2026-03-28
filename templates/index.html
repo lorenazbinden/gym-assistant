@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gym Assistant AI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e8;
+      min-height: 100vh;
+    }
+
+    /* ---- HEADER ---- */
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-bottom: 1px solid #2a2a4a;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    header .logo { font-size: 32px; }
+    header h1 { font-size: 22px; font-weight: 700; color: #fff; }
+    header p { font-size: 13px; color: #888; margin-top: 2px; }
+
+    /* ---- TABS ---- */
+    .tabs {
+      display: flex;
+      background: #111118;
+      border-bottom: 1px solid #222238;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 14px;
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      color: #6c63ff;
+      border-bottom-color: #6c63ff;
+      background: #12121a;
+    }
+    .tab-btn:hover:not(.active) { color: #aaa; }
+
+    /* ---- PANELS ---- */
+    .tab-panel { display: none; padding: 24px; max-width: 720px; margin: 0 auto; }
+    .tab-panel.active { display: block; }
+
+    /* ---- CARDS ---- */
+    .card {
+      background: #12121e;
+      border: 1px solid #222238;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card h2 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .card .subtitle { font-size: 13px; color: #666; margin-bottom: 20px; }
+
+    /* ---- STATUS BADGE ---- */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .status-badge.ok { background: rgba(0,200,100,0.15); color: #00c864; border: 1px solid rgba(0,200,100,0.3); }
+    .status-badge.missing { background: rgba(255,100,50,0.12); color: #ff6432; border: 1px solid rgba(255,100,50,0.3); }
+    .status-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+    /* ---- UPLOAD ZONE ---- */
+    .upload-zone {
+      border: 2px dashed #333350;
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #0d0d1a;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: #6c63ff;
+      background: rgba(108,99,255,0.06);
+    }
+    .upload-zone .icon { font-size: 40px; margin-bottom: 12px; }
+    .upload-zone p { color: #888; font-size: 14px; }
+    .upload-zone strong { color: #aaa; }
+    #file-input { display: none; }
+
+    /* ---- PREVIEW GRID ---- */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .preview-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+    .preview-item .remove-btn {
+      position: absolute;
+      top: 4px; right: 4px;
+      background: rgba(0,0,0,0.7);
+      border: none;
+      color: #fff;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ---- MACHINES LIST ---- */
+    .machine-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .machine-tag {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+    .machine-tag .name { font-weight: 600; color: #c0b0ff; }
+    .machine-tag .muscles { font-size: 11px; color: #666; margin-top: 2px; }
+
+    /* ---- FORM FIELDS ---- */
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 13px; color: #aaa; margin-bottom: 8px; font-weight: 600; }
+    .form-group select, .form-group input {
+      width: 100%;
+      background: #0d0d1a;
+      border: 1px solid #2a2a40;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #e0e0e8;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group select:focus, .form-group input:focus { border-color: #6c63ff; }
+    .form-group select option { background: #1a1a2e; }
+
+    /* ---- BUTTONS ---- */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6c63ff, #8b5cf6);
+      color: #fff;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(108,99,255,0.4); }
+    .btn-primary:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+    .btn-secondary {
+      background: #1a1a2e;
+      color: #888;
+      border: 1px solid #2a2a40;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .btn-secondary:hover { color: #ff6432; border-color: #ff6432; }
+
+    /* ---- SPINNER ---- */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- ROUTINE OUTPUT ---- */
+    #routine-output {
+      background: #0d0d1a;
+      border: 1px solid #222238;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      display: none;
+      white-space: pre-wrap;
+      line-height: 1.7;
+      font-size: 14px;
+      color: #d0d0e0;
+    }
+
+    /* ---- TOAST ---- */
+    #toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1a1a30;
+      border: 1px solid #3a3a5a;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: transform 0.3s;
+      z-index: 9999;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.error { border-color: #ff4444; color: #ff8888; }
+    #toast.success { border-color: #00c864; color: #00e070; }
+
+    /* ---- PROGRESS ---- */
+    .progress-bar {
+      height: 3px;
+      background: #1a1a2e;
+      border-radius: 2px;
+      margin-top: 16px;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6c63ff, #8b5cf6);
+      animation: progress-indeterminate 1.5s ease-in-out infinite;
+    }
+    @keyframes progress-indeterminate {
+      0%   { transform: translateX(-100%); width: 60%; }
+      50%  { transform: translateX(60%); width: 60%; }
+      100% { transform: translateX(200%); width: 60%; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">💪</div>
+  <div>
+    <h1>Gym Assistant AI</h1>
+    <p>Tu entrenador personal con inteligencia artificial</p>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('routine')">Rutina de hoy</button>
+  <button class="tab-btn" onclick="switchTab('setup')">Mis maquinas</button>
+</div>
+
+<!-- ============ TAB: RUTINA ============ -->
+<div id="tab-routine" class="tab-panel active">
+
+  <!-- Estado de maquinas -->
+  <div id="machines-status-routine" class="card" style="padding: 16px 24px;">
+    {% if machines %}
+      <div class="status-badge ok"><span class="dot"></span> {{ machines.machines|length }} maquinas detectadas</div>
+      <div class="machine-tags" id="machines-mini-list">
+        {% for m in machines.machines %}
+          <div class="machine-tag">
+            <div class="name">{{ m.name }}</div>
+            <div class="muscles">{{ m.muscles | join(', ') }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="status-badge missing"><span class="dot"></span> Sin maquinas configuradas</div>
+      <p style="font-size: 13px; color: #666; margin-top: 8px;">Ve a "Mis maquinas" para subir las fotos de tu gimnasio.</p>
+    {% endif %}
+  </div>
+
+  <!-- Formulario rutina -->
+  <div class="card">
+    <h2>Genera tu rutina</h2>
+    <p class="subtitle">Configura tu sesion de hoy y el AI creara la rutina perfecta para ti</p>
+
+    <div class="form-group">
+      <label>Objetivo</label>
+      <select id="goal">
+        <option value="ganar musculo" {% if profile.goal == 'ganar musculo' %}selected{% endif %}>Ganar musculo</option>
+        <option value="perder grasa" {% if profile.goal == 'perder grasa' %}selected{% endif %}>Perder grasa / definicion</option>
+        <option value="ganar fuerza" {% if profile.goal == 'ganar fuerza' %}selected{% endif %}>Ganar fuerza</option>
+        <option value="resistencia y cardio" {% if profile.goal == 'resistencia y cardio' %}selected{% endif %}>Resistencia y cardio</option>
+        <option value="tonificacion general" {% if profile.goal == 'tonificacion general' %}selected{% endif %}>Tonificacion general</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Nivel</label>
+      <select id="level">
+        <option value="principiante" {% if profile.level == 'principiante' %}selected{% endif %}>Principiante (menos de 6 meses)</option>
+        <option value="intermedio" {% if profile.level == 'intermedio' %}selected{% endif %}>Intermedio (6 meses - 2 anos)</option>
+        <option value="avanzado" {% if profile.level == 'avanzado' %}selected{% endif %}>Avanzado (mas de 2 anos)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Dias por semana que entrenas</label>
+      <select id="days">
+        <option value="2" {% if profile.days == '2' %}selected{% endif %}>2 dias</option>
+        <option value="3" {% if profile.days == '3' %}selected{% endif %}>3 dias</option>
+        <option value="4" {% if profile.days == '4' %}selected{% endif %}>4 dias</option>
+        <option value="5" {% if profile.days == '5' %}selected{% endif %}>5 dias</option>
+        <option value="6" {% if profile.days == '6' %}selected{% endif %}>6 dias</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Grupo muscular para HOY</label>
+      <select id="muscle_group">
+        <option value="pecho y triceps">Pecho y triceps</option>
+        <option value="espalda y biceps">Espalda y biceps</option>
+        <option value="piernas y gluteos">Piernas y gluteos</option>
+        <option value="hombros y trapecio">Hombros y trapecio</option>
+        <option value="abdomen y core">Abdomen y core</option>
+        <option value="todo el cuerpo">Cuerpo completo (Full Body)</option>
+        <option value="tren superior">Tren superior</option>
+        <option value="tren inferior">Tren inferior</option>
+        <option value="cardio y resistencia">Cardio y resistencia</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" id="btn-routine" onclick="getRoutine()">
+      <span id="routine-icon">⚡</span>
+      <span id="routine-text">Generar mi rutina de hoy</span>
+      <div class="spinner" id="routine-spinner"></div>
+    </button>
+
+    <div class="progress-bar" id="routine-progress"><div class="progress-fill"></div></div>
+  </div>
+
+  <!-- Resultado -->
+  <div id="routine-output"></div>
+
+</div>
+
+<!-- ============ TAB: SETUP ============ -->
+<div id="tab-setup" class="tab-panel">
+
+  <div class="card">
+    <h2>Fotos de las maquinas</h2>
+    <p class="subtitle">Sube fotos de todas las maquinas de tu gimnasio. El AI las analizara y recordara para siempre.</p>
+
+    {% if machines %}
+      <div class="status-badge ok"><span class="dot"></span> {{ machines.machines|length }} maquinas guardadas</div>
+    {% else %}
+      <div class="status-badge missing"><span class="dot"></span> Sin maquinas configuradas</div>
+    {% endif %}
+
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault(); this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleDrop(event)">
+      <div class="icon">📸</div>
+      <p><strong>Haz clic o arrastra las fotos aqui</strong></p>
+      <p style="margin-top: 6px;">JPG, PNG o WEBP - Puedes subir varias a la vez</p>
+    </div>
+    <input type="file" id="file-input" multiple accept="image/*" onchange="handleFiles(this.files)" />
+
+    <div class="preview-grid" id="preview-grid"></div>
+
+    <div class="progress-bar" id="upload-progress" style="margin-top: 0;"><div class="progress-fill"></div></div>
+
+    <button class="btn btn-primary" id="btn-upload" onclick="uploadMachines()" style="margin-top: 16px; display: none;">
+      <span id="upload-icon">🔍</span>
+      <span id="upload-text">Analizar maquinas con AI</span>
+      <div class="spinner" id="upload-spinner"></div>
+    </button>
+  </div>
+
+  <!-- Maquinas detectadas -->
+  <div class="card" id="detected-card" {% if not machines %}style="display:none"{% endif %}>
+    <h2>Maquinas detectadas</h2>
+    <p class="subtitle">El AI identifico estas maquinas en tus fotos</p>
+    <div class="machine-tags" id="machines-list">
+      {% if machines %}
+        {% for m in machines.machines %}
+          <div class="machine-tag">
+            <div class="name">{{ m.name }}</div>
+            <div class="muscles">{{ m.type }} &mdash; {{ m.muscles | join(', ') }}</div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+    <button class="btn btn-secondary" onclick="resetMachines()">Borrar y subir fotos nuevas</button>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let selectedFiles = [];
+
+  // ---- TABS ----
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+
+  // ---- TOAST ----
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'show ' + type;
+    setTimeout(() => t.className = '', 3000);
+  }
+
+  // ---- FILE HANDLING ----
+  function handleFiles(files) {
+    for (const f of files) {
+      if (!f.type.startsWith('image/')) continue;
+      selectedFiles.push(f);
+      addPreview(f);
+    }
+    document.getElementById('btn-upload').style.display = selectedFiles.length > 0 ? 'flex' : 'none';
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('upload-zone').classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+  }
+
+  function addPreview(file) {
+    const grid = document.getElementById('preview-grid');
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const div = document.createElement('div');
+      div.className = 'preview-item';
+      const idx = selectedFiles.indexOf(file);
+      div.innerHTML = `<img src="${e.target.result}" alt="preview" />
+        <button class="remove-btn" onclick="removeFile(${idx}, this.parentElement)">✕</button>`;
+      grid.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeFile(idx, el) {
+    selectedFiles.splice(idx, 1);
+    el.remove();
+    document.getElementById('btn-upload').style.display = selectedFiles.length > 0 ? 'flex' : 'none';
+  }
+
+  // ---- UPLOAD MACHINES ----
+  async function uploadMachines() {
+    if (selectedFiles.length === 0) return;
+
+    const btn = document.getElementById('btn-upload');
+    const spinner = document.getElementById('upload-spinner');
+    const icon = document.getElementById('upload-icon');
+    const text = document.getElementById('upload-text');
+    const progress = document.getElementById('upload-progress');
+
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    icon.style.display = 'none';
+    text.textContent = 'Analizando con AI...';
+    progress.style.display = 'block';
+
+    const formData = new FormData();
+    selectedFiles.forEach(f => formData.append('photos', f));
+
+    try {
+      const res = await fetch('/upload-machines', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.error) {
+        showToast(data.error, 'error');
+        return;
+      }
+
+      renderMachines(data.machines.machines || []);
+      document.getElementById('detected-card').style.display = 'block';
+      selectedFiles = [];
+      document.getElementById('preview-grid').innerHTML = '';
+      btn.style.display = 'none';
+      showToast(`Se detectaron ${(data.machines.machines || []).length} maquinas`, 'success');
+      updateStatusBadge(data.machines.machines || []);
+    } catch (err) {
+      showToast('Error de conexion. Intenta de nuevo.', 'error');
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      icon.style.display = 'block';
+      text.textContent = 'Analizar maquinas con AI';
+      progress.style.display = 'none';
+    }
+  }
+
+  function renderMachines(machines) {
+    const list = document.getElementById('machines-list');
+    list.innerHTML = machines.map(m =>
+      `<div class="machine-tag">
+        <div class="name">${m.name}</div>
+        <div class="muscles">${m.type || ''} &mdash; ${(m.muscles || []).join(', ')}</div>
+      </div>`
+    ).join('');
+  }
+
+  function updateStatusBadge(machines) {
+    const statusDiv = document.getElementById('machines-status-routine');
+    statusDiv.innerHTML = `
+      <div class="status-badge ok"><span class="dot"></span> ${machines.length} maquinas detectadas</div>
+      <div class="machine-tags" id="machines-mini-list">
+        ${machines.map(m => `<div class="machine-tag">
+          <div class="name">${m.name}</div>
+          <div class="muscles">${(m.muscles || []).join(', ')}</div>
+        </div>`).join('')}
+      </div>`;
+  }
+
+  // ---- RESET MACHINES ----
+  async function resetMachines() {
+    if (!confirm('Seguro que quieres borrar las maquinas guardadas?')) return;
+    const res = await fetch('/reset-machines', { method: 'POST' });
+    if ((await res.json()).success) {
+      document.getElementById('detected-card').style.display = 'none';
+      location.reload();
+    }
+  }
+
+  // ---- GET ROUTINE ----
+  async function getRoutine() {
+    const btn = document.getElementById('btn-routine');
+    const spinner = document.getElementById('routine-spinner');
+    const icon = document.getElementById('routine-icon');
+    const text = document.getElementById('routine-text');
+    const progress = document.getElementById('routine-progress');
+    const output = document.getElementById('routine-output');
+
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    icon.style.display = 'none';
+    text.textContent = 'Creando tu rutina personalizada...';
+    progress.style.display = 'block';
+    output.style.display = 'none';
+
+    const body = {
+      goal: document.getElementById('goal').value,
+      level: document.getElementById('level').value,
+      days: document.getElementById('days').value,
+      muscle_group: document.getElementById('muscle_group').value,
+    };
+
+    try {
+      const res = await fetch('/get-routine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        showToast(data.error, 'error');
+        return;
+      }
+
+      output.textContent = data.routine;
+      output.style.display = 'block';
+      output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      showToast('Error de conexion. Intenta de nuevo.', 'error');
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      icon.style.display = 'block';
+      text.textContent = 'Generar mi rutina de hoy';
+      progress.style.display = 'none';
+    }
+  }
+</script>
+
+</body>
+</html>
