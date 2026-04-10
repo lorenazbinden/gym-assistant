@@ -4,10 +4,16 @@ import re
 import base64
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify
-import anthropic
+from openai import OpenAI
 
 app = Flask(__name__)
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+client = OpenAI(
+    api_key=os.environ.get("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1",
+)
+
+MODEL_VISION = "openai/gpt-4o-mini"
+MODEL_ROUTINE = "openai/gpt-4o-mini"
 
 DATA_FILE = Path("gym_data/machines.json")
 PROFILE_FILE = Path("gym_data/profile.json")
@@ -54,12 +60,8 @@ def upload_machines():
         img_data = base64.standard_b64encode(img_bytes).decode("utf-8")
         media_type = f.content_type if f.content_type else "image/jpeg"
         content.append({
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": media_type,
-                "data": img_data,
-            },
+            "type": "image_url",
+            "image_url": {"url": f"data:{media_type};base64,{img_data}"},
         })
 
     if not content:
@@ -77,12 +79,12 @@ def upload_machines():
     })
 
     try:
-        response = client.messages.create(
-            model="claude-opus-4-6",
+        response = client.chat.completions.create(
+            model=MODEL_VISION,
             max_tokens=2000,
             messages=[{"role": "user", "content": content}],
         )
-        text = next((b.text for b in response.content if b.type == "text"), "")
+        text = response.choices[0].message.content or ""
 
         json_match = re.search(r"\{.*\}", text, re.DOTALL)
         if json_match:
@@ -142,13 +144,12 @@ Formato: usa titulos claros, bullets y separadores visuales para que sea facil d
 Si el grupo muscular elegido no tiene maquinas especificas disponibles, combina con ejercicios corporales complementarios."""
 
     try:
-        response = client.messages.create(
-            model="claude-opus-4-6",
+        response = client.chat.completions.create(
+            model=MODEL_ROUTINE,
             max_tokens=3000,
-            thinking={"type": "adaptive"},
             messages=[{"role": "user", "content": prompt}],
         )
-        routine_text = next((b.text for b in response.content if b.type == "text"), "")
+        routine_text = response.choices[0].message.content or ""
         return jsonify({"routine": routine_text})
 
     except Exception as e:
